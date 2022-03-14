@@ -141,9 +141,9 @@
   <ItemGroup>
     <ClInclude Include="AVLTree.h" />
     <ClInclude Include="AVLTreeGUI.h" />
+    <ClInclude Include="ButtonAction.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Function.h" />
-    <ClInclude Include="Menu.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TreeNode.h" />
@@ -151,7 +151,7 @@
   <ItemGroup>
     <ClCompile Include="AVLTree.cpp" />
     <ClCompile Include="AVLTreeGUI.cpp" />
-    <ClCompile Include="Menu.cpp" />
+    <ClCompile Include="ButtonAction.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="AVLTreeGUI.rc" />

@@ -44,11 +44,11 @@ TreeNode* deepestRight(TreeNode* t)
 		return deepestRight(t->right);
 }
 
-int maxDepth(TreeNode* n)
+int maxDepth(TreeNode* t)
 {
-	if (!n)
+	if (!t)
 		return 0;
-	return 1 + std::max(maxDepth(n->left), maxDepth(n->right));
+	return 1 + std::max(maxDepth(t->left), maxDepth(t->right));
 }
 
 #pragma endregion
@@ -263,31 +263,31 @@ bool find(TreeNode* t, const int& x)
 
 #pragma region Tree Traversal
 
-void inorder(TreeNode* t)
+void printInorder(TreeNode* t, std::vector<int>& ans)
 {
 	if (!t)
 		return;
-	inorder(t->left);
-	std::cout << t->data << " ";
-	inorder(t->right);
+	printInorder(t->left, ans);
+	ans.push_back(t->data);
+	printInorder(t->right, ans);
 }
 
-void postorder(TreeNode* t)
+void printPostorder(TreeNode* t, std::vector<int>& ans)
 {
 	if (!t)
 		return;
-	postorder(t->left);
-	postorder(t->right);
-	std::cout << t->data << " ";
+	printPostorder(t->left, ans);
+	printPostorder(t->right, ans);
+	ans.push_back(t->data);
 }
 
-void preorder(TreeNode* t)
+void printPreorder(TreeNode* t, std::vector<int>& ans)
 {
 	if (!t)
 		return;
-	std::cout << t->data << " ";
-	preorder(t->left);
-	preorder(t->right);
+	ans.push_back(t->data);
+	printPreorder(t->left, ans);
+	printPreorder(t->right, ans);
 }
 
 #pragma endregion

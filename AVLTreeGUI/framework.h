@@ -15,6 +15,8 @@
 #include <tchar.h>
 // Misc
 #include <string>
+#include <math.h>
+#include <cmath>
 // Buffer
 #include <Uxtheme.h>
 #pragma comment (lib, "uxtheme.lib")

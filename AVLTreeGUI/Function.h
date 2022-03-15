@@ -3,45 +3,47 @@
 #include <iostream>
 #include "TreeNode.h"
 #include <list>
+#include <string>
 
 #define _CRT_SECURE_NO_WARNINGS
 #pragma region Height
 
 int getHeight(TreeNode* t)
 {
-	return (!t ? -1 : t->height);
+	if (!t)
+		return 0;
+	return t->height;
 }
 
 int getBalance(TreeNode* t)
 {
 	if (!t)
 		return 0;
-	else
-		return getHeight(t->left) - getHeight(t->right);
+
+	return getHeight(t->left) - getHeight(t->right);
 }
 
 #pragma endregion
 
-#pragma region Deepest Left and Deepest Right
+#pragma region Min and Max node
 
-TreeNode* deepestLeft(TreeNode* t)
+TreeNode* minValueTreeNode(TreeNode* t)
 {
-	if (!t)
-		return nullptr;
-	else if (t->left == nullptr)
-		return t;
-	else
-		return deepestLeft(t->left);
+	TreeNode* current = t;
+
+	while (current->left)
+		current = current->left;
+	return current;
 }
 
-TreeNode* deepestRight(TreeNode* t)
+TreeNode* maxValueTreeNode(TreeNode* t)
 {
-	if (!t)
-		return nullptr;
-	else if (t->right == nullptr)
-		return t;
-	else
-		return deepestRight(t->right);
+	TreeNode* current = t;
+
+	while (!current->right)
+		current = current->right;
+
+	return current;
 }
 
 int maxDepth(TreeNode* t)
@@ -57,8 +59,11 @@ int maxDepth(TreeNode* t)
 TreeNode* rightRotate(TreeNode*& t)
 {
 	TreeNode* u = t->left;
-	t->left = u->right;
+	TreeNode* t2 = u->right;
+
 	u->right = t;
+	t->left = t2;
+
 	t->height = std::max(getHeight(t->left), getHeight(t->right)) + 1;
 	u->height = std::max(getHeight(u->left), t->height) + 1;
 	return u;
@@ -67,8 +72,11 @@ TreeNode* rightRotate(TreeNode*& t)
 TreeNode* leftRotate(TreeNode*& t)
 {
 	TreeNode* u = t->right;
-	t->right = u->left;
+	TreeNode* t2 = u->left;
+
 	u->left = t;
+	t->right = t2;
+
 	t->height = std::max(getHeight(t->left), getHeight(t->right)) + 1;
 	u->height = std::max(getHeight(t->right), t->height) + 1;
 	return u;
@@ -88,72 +96,18 @@ TreeNode* doubleRightRotate(TreeNode*& t)
 
 #pragma endregion
 
-#pragma region Visual
-
-void visualizeTree(TreeNode* t)
-{
-	std::cout << "\n";
-	struct node_depth
-	{
-		TreeNode* n;
-		int lvl;
-		node_depth(TreeNode* n_, int lvl_) : n(n_), lvl(lvl_) {}
-	};
-
-	int depth = maxDepth(t);
-
-	char buf[128];
-	int last_lvl = 0;
-	int offset = (1 << depth) - 1;
-
-	std::list<node_depth> q;
-
-	q.push_back(node_depth(t, last_lvl));
-	while (q.size())
-	{
-		const node_depth& nd = *q.begin();
-
-		// output a new line and calculate offset the new line
-		if (last_lvl != nd.lvl)
-		{
-			std::cout << "\n";
-
-			last_lvl = nd.lvl;
-			offset = (1 << (depth - nd.lvl)) - 1;
-		}
-
-		// write into buffer
-		if (nd.n)
-			sprintf_s(buf, " %*s%d%*s", offset, " ", nd.n->data, offset, " ");
-
-		else
-			sprintf_s(buf, " %*s", offset << 1, " ");
-
-		std::cout << buf;
-
-		if (nd.n)
-		{
-			q.push_back(node_depth(nd.n->left, last_lvl + 1));
-			q.push_back(node_depth(nd.n->right, last_lvl + 1));
-		}
-
-		q.pop_front();
-	}
-	std::cout << "\n\n";
-
-}
-
-#pragma endregion
-
 #pragma region Misc
 
-void clear(TreeNode* t)
+TreeNode* clear(TreeNode* t)
 {
 	if (!t)
-		return;
+		return t;
 	clear(t->left);
 	clear(t->right);
+	t->height = 0;
 	delete t;
+	t = nullptr;
+	return t;
 }
 
 TreeNode* insert(TreeNode* t, const int& x)
@@ -162,90 +116,113 @@ TreeNode* insert(TreeNode* t, const int& x)
 	{
 		t = new TreeNode;
 		t->data = x;
-		t->height = 0;
+		t->height = 1;
 		t->left = t->right = nullptr;
-	}
-	else if (x < t->data)
-	{
-		t->left = insert(t->left, x);
-		if (getHeight(t->left) - getHeight(t->right) == 2)
-		{
-			if (x < t->left->data)
-				t = rightRotate(t);
-			else
-				t = doubleRightRotate(t);
-		}
-	}
-	else if (x > t->data)
-	{
-		t->right = insert(t->right, x);
-		if (getHeight(t->right) - getHeight(t->left) == 2)
-		{
-			if (x > t->right->data)
-				t = leftRotate(t);
-			else
-				t = doubleLeftRotate(t);
-		}
+		return t;
 	}
 
-	t->height = std::max(getHeight(t->left), getHeight(t->right)) + 0;
+	if (x < t->data)
+		t->left = insert(t->left, x);
+
+	else if (x > t->data)
+		t->right = insert(t->right, x);
+
+	else
+		return t;
+
+	// update height
+	t->height = 1 + std::max(getHeight(t->left), getHeight(t->right));
+
+	// get balance factor
+	int balance = getBalance(t);
+
+	// 4 cases if unbalance
+	if (balance > 1 && x < t->left->data)
+	{ // left left case
+		return rightRotate(t);
+	}
+
+	if (balance < -1 && x > t->right->data)
+	{ // right rght case
+		return leftRotate(t);
+	}
+
+	if (balance > 1 && x > t->left->data)
+	{ // left right case
+		return rightRotate(t);
+	}
+
+	if (balance < -1 && x < t->right->data)
+	{ // right left case
+		return leftRotate(t);
+	}
+
 	return t;
 }
 
 TreeNode* remove(int x, TreeNode* t)
 {
-	TreeNode* temp;
-
 	if (t == nullptr)
-		return nullptr;
+		return t;
 
-	else if (x < t->data)
+	if (x < t->data)
 		t->left = remove(x, t->left);
+
 	else if (x > t->data)
 		t->right = remove(x, t->right);
 
-	else if (t->left && t->right)
-	{ // has 2 children
-		temp = deepestLeft(t->right);
-		t->data = temp->data;
-		t->right = remove(t->data, t->right);
-	}
 	else
-	{ // has at least one child
-		temp = t;
-		if (t->left == nullptr)
-			t = t->right;
-		else if (t->right == nullptr)
-			t = t->left;
-		delete temp;
+	{
+		if (!t->left || !t->right)
+		{ // one child or none
+			TreeNode* temp = t->left ? t->right : t->right;
+
+			if (!temp)
+			{
+				temp = t;
+				t = NULL;
+			}
+			else
+				*t = *temp;
+			free(temp);
+		}
+		else
+		{ // two children
+			TreeNode* temp = minValueTreeNode(t->right);
+			t->data = temp->data;
+			t->right = remove(temp->data, t->right);
+		}
 	}
-	if (!t)
-		return t;
 
 	// Balance the tree
 
-	t->height = std::max(getHeight(t->left), getHeight(t->right)) + 1;
+	if (!t)
+		return t;
 
-	if (getHeight(t->left) - getHeight(t->right) == 2)
-	{
-		// right right case
-		if (t->left && t->left->right && t->left->left)
-			if (getHeight(t->left->left) - getHeight(t->left->right) == 1)
-				return leftRotate(t);
-		// right left case
-			else
-				return doubleLeftRotate(t);
+	t->height = 1 + std::max(getHeight(t->left), getHeight(t->right));
+
+	int balance = getBalance(t);
+
+	if (balance > 1 && getBalance(t->left) >= 0)
+	{ // left left case
+		return rightRotate(t);
 	}
-	// If right TreeNode is deleted, left case
-	else if (getHeight(t->right) - getHeight(t->left) == 2)
-	{
-		// left left case
-		if (getHeight(t->right->right) - getHeight(t->right->left) == 1)
-			return rightRotate(t);
-		// left right case
-		else
-			return doubleRightRotate(t);
+
+	if (balance > 1 && getBalance(t->left) < 0)
+	{ // left right case
+		return doubleRightRotate(t);
 	}
+
+	if (balance < -1 && getBalance(t->right) <= 0)
+	{ // right right case
+		return leftRotate(t);
+	}
+
+	if (balance < -1 && getBalance(t->right) > 0)
+	{
+		return doubleLeftRotate(t);
+	}
+
 	return t;
 }
 
@@ -259,35 +236,63 @@ bool find(TreeNode* t, const int& x)
 	return find(t->left, x) || find(t->right, x);
 }
 
+int getSize(TreeNode* t, int& x)
+{
+	if (!t)
+		return 0;
+
+	return 1 + getSize(t->left, x) + getSize(t->right, x);
+}
+
 #pragma endregion
 
 #pragma region Tree Traversal
 
-void printInorder(TreeNode* t, std::vector<int>& ans)
+void printInorder(TreeNode* t, std::string& s)
 {
 	if (!t)
 		return;
-	printInorder(t->left, ans);
-	ans.push_back(t->data);
-	printInorder(t->right, ans);
+	printInorder(t->left, s);
+	s = s + " " + std::to_string(t->data);
+	printInorder(t->right, s);
 }
 
-void printPostorder(TreeNode* t, std::vector<int>& ans)
+void printPostorder(TreeNode* t, std::string& s)
 {
 	if (!t)
 		return;
-	printPostorder(t->left, ans);
-	printPostorder(t->right, ans);
-	ans.push_back(t->data);
+	printPostorder(t->left, s);
+	printPostorder(t->right, s);
+	s += " " + std::to_string(t->data);
 }
 
-void printPreorder(TreeNode* t, std::vector<int>& ans)
+void printPreorder(TreeNode* t, std::string& s)
 {
 	if (!t)
 		return;
-	ans.push_back(t->data);
-	printPreorder(t->left, ans);
-	printPreorder(t->right, ans);
+	s += " " + std::to_string(t->data);
+	printPreorder(t->left, s);
+	printPreorder(t->right, s);
+}
+
+void printGivenLevel(TreeNode* t, std::vector<std::string>& ans, int level)
+{
+	if (!t)
+	{
+		ans.push_back(".");
+		return;
+	}
+
+	if (level == 1)
+		ans.push_back(std::to_string(t->data));
+
+	else if (level > 1)
+	{
+		if (!t->left && !t->right)
+			return;
+		printGivenLevel(t->left, ans, level - 1);
+		printGivenLevel(t->right, ans, level - 1);
+	}
 }
 
 #pragma endregion

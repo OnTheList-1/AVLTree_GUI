@@ -28,7 +28,15 @@ HWND g_messageStaticbox0;
 HWND g_messageStaticbox1;
 HWND g_messageStaticbox2;
 HWND g_propertyTextHeader0;
+HWND g_propertyTextHeader1;
+HWND g_propertyTextHeader2;
+HWND g_propertyTextHeader3;
 HWND g_propertyTextValue0;
+HWND g_propertyTextValue1;
+HWND g_propertyTextValue2;
+HWND g_propertyTextValue3;
+
+std::vector<HWND> propertyVec;
 
 // Region to draw
 RECT g_canvasRect;
@@ -263,17 +271,47 @@ bool OnCreate(HWND hWnd, LPCREATESTRUCT lpCreateStruct)
 		50, 100, 50, 50, hWnd, nullptr, hInst, NULL);
 	SendMessage(g_propertyTextValue0, WM_SETFONT, (WPARAM)hFont, NULL);
 
+	g_propertyTextHeader1 = CreateWindow(L"static", L"Print Preorder: ", WS_CHILD | WS_VISIBLE,
+		10, 115, 70, 50, hWnd, nullptr, hInst, NULL);
+	SendMessage(g_propertyTextHeader1, WM_SETFONT, (WPARAM)hFont, NULL);
+
+	g_propertyTextValue1 = CreateWindow(L"static", L"NULL", WS_CHILD | WS_VISIBLE,
+		80, 115, 1600, 50, hWnd, nullptr, hInst, NULL);
+	SendMessageA(g_propertyTextValue1, WM_SETFONT, (WPARAM)hFont, NULL);
+
+	g_propertyTextHeader2 = CreateWindow(L"static", L"Print Postorder: ", WS_CHILD | WS_VISIBLE,
+		10, 130, 80, 50, hWnd, nullptr, hInst, NULL);
+	SendMessage(g_propertyTextHeader2, WM_SETFONT, (WPARAM)hFont, NULL);
+
+	g_propertyTextValue2 = CreateWindow(L"static", L"NULL", WS_CHILD | WS_VISIBLE,
+		80, 130, 1600, 50, hWnd, nullptr, hInst, NULL);
+	SendMessage(g_propertyTextValue2, WM_SETFONT, (WPARAM)hFont, NULL);
+
+	g_propertyTextHeader3 = CreateWindow(L"static", L"Print Inorder: ", WS_CHILD | WS_VISIBLE,
+		10, 145, 70, 50, hWnd, nullptr, hInst, NULL);
+	SendMessage(g_propertyTextHeader3, WM_SETFONT, (WPARAM)hFont, NULL);
+
+	g_propertyTextValue3 = CreateWindow(L"static", L"NULL", WS_CHILD | WS_VISIBLE,
+		80, 145, 1600, 50, hWnd, nullptr, hInst, NULL);
+	SendMessage(g_propertyTextValue3, WM_SETFONT, (WPARAM)hFont, NULL);
+
 	// Canvas Rect
 	g_canvasRect.left = 0;
-	g_canvasRect.top = 200;
+	g_canvasRect.top = 180;
 	g_canvasRect.right = 1600;
 	g_canvasRect.bottom = 900;
 
 	// Property Rect
 	g_propertyRect.left = 40;
 	g_propertyRect.top = 90;
-	g_propertyRect.right = 110;
-	g_propertyRect.bottom = 140;
+	g_propertyRect.right = 1600;
+	g_propertyRect.bottom = 180;
+
+	// Property Vector
+	propertyVec.push_back(g_propertyTextValue0);
+	propertyVec.push_back(g_propertyTextValue1);
+	propertyVec.push_back(g_propertyTextValue2);
+	propertyVec.push_back(g_propertyTextValue3);
 
 	InvalidateRect(hWnd, NULL, true);
 
@@ -309,7 +347,7 @@ void OnCommand(HWND hWnd, int id, HWND hwndCtl1, UINT codeNotify)
 	{
 	case IDC_INSERT_BUTTON:
 		insertButtonAction(g_insertTextbox, t, g_messageStaticbox0);
-		updateHeight(g_propertyTextValue0, t);
+		updateProperty(propertyVec, t);
 		InvalidateRect(hWnd, &g_propertyRect, false);
 		InvalidateRect(hWnd, &g_canvasRect, false);
 
@@ -325,7 +363,7 @@ void OnCommand(HWND hWnd, int id, HWND hwndCtl1, UINT codeNotify)
 		removeButtonAction(g_removeTextbox, t, g_messageStaticbox1);
 		InvalidateRect(hWnd, &g_propertyRect, false);
 		InvalidateRect(hWnd, &g_canvasRect, false);
-		updateHeight(g_propertyTextValue0, t);
+		updateProperty(propertyVec, t);
 		SendMessage(hWnd, WM_PAINT, NULL, NULL);
 		break;
 
@@ -333,7 +371,7 @@ void OnCommand(HWND hWnd, int id, HWND hwndCtl1, UINT codeNotify)
 		clearButtonAction(g_removeButton, t);
 		InvalidateRect(hWnd, &g_propertyRect, false);
 		InvalidateRect(hWnd, &g_canvasRect, false);
-		updateHeight(g_propertyTextValue0, t);
+		updateProperty(propertyVec, t);
 		SendMessage(hWnd, WM_PAINT, NULL, NULL);
 		break;
 	}
@@ -373,36 +411,54 @@ void MemoryBuffer(HWND hWnd, HDC hdc)
 	Gdiplus::Bitmap* buffer = new Gdiplus::Bitmap(1600, 900, PixelFormat32bppPARGB);
 	Gdiplus::Graphics memGraphics(buffer);
 
+	// Initialize materials to draw
 	Gdiplus::Pen* blackPen = new Gdiplus::Pen(Gdiplus::Color(0, 0, 0));
+	Gdiplus::FontFamily fontFamily(L"Verdana");
+	Gdiplus::Font font(&fontFamily, 20, Gdiplus::FontStyleRegular, Gdiplus::Unit::UnitPixel);
+	Gdiplus::PointF treeDataPos(775, 200);
+	Gdiplus::SolidBrush solidBrush(Gdiplus::Color(0, 0, 0));
 
 	graphics.Clear(Gdiplus::Color(255, 255, 255));
 
-	int height = t.getDepth();
+	/*
 
-	if (height > 0)
+		Draw out n elements where there are n ellipse, n values and 2 * n lines
+		For every element in an ellipse,
+
+	*/
+
+	int size = t.Size();
+	int height = 2;
+	int factorX = 1;
+	int factorY = 1;
+	int offsetX_ellipse = 15;
+	int offsetY_ellipse = 10;
+	int prevXPos = (int)treeDataPos.X;
+	std::vector<std::string> dataPerLevel = t.PrintLevel();
+
+	for (int i = 1; i < dataPerLevel.size(); ++i)
 	{
-		memGraphics.DrawEllipse(blackPen, 775, 200, 50, 50);
-
-		for (int i = height; i > 0; --i)
+		if (dataPerLevel[i] == "/")
 		{
-			memGraphics.DrawEllipse(blackPen, 775 / (i + 1), 200 * (i + 1), 50, 50);
+			treeDataPos.X -= 200;
+			prevXPos = (int)treeDataPos.X;
+			treeDataPos.Y += 80;
+			++factorX;
+			++height;
+			continue;
 		}
+
+		if (dataPerLevel[i] == ".")
+		{
+			treeDataPos.X += 125;
+			continue;
+		}
+
+		std::wstring wstr = std::wstring(dataPerLevel[i].begin(), dataPerLevel[i].end());
+		memGraphics.DrawString(wstr.c_str(), -1, &font, treeDataPos, &solidBrush);
+		memGraphics.DrawEllipse(blackPen, (int)treeDataPos.X - offsetX_ellipse, (int)treeDataPos.Y - offsetY_ellipse, 50, 50);
+		treeDataPos.X = prevXPos + 125;
 	}
-
-	//memGraphics.DrawLine(blackPen, 780, 240, 600, 400);
-	//memGraphics.DrawLine(blackPen, 820, 240, 1000, 400);
-
-	//memGraphics.DrawEllipse(blackPen, 575, 400, 50, 50);
-	//memGraphics.DrawEllipse(blackPen, 975, 400, 50, 50);
-	//memGraphics.DrawEllipse(blackPen, 375, 600, 50, 50);
-	//memGraphics.DrawEllipse(blackPen, 775, 600, 50, 50);
-	//memGraphics.DrawEllipse(blackPen, 1175, 600, 50, 50);
-
-	//memGraphics.DrawLine(blackPen, 580, 440, 400, 600);
-	//memGraphics.DrawLine(blackPen, 620, 440, 800, 600);
-	//memGraphics.DrawLine(blackPen, 980, 440, 800, 600);
-	//memGraphics.DrawLine(blackPen, 1020, 440, 1200, 600);
-
 
 	graphics.DrawImage(buffer, 0, 0);
 	delete buffer;

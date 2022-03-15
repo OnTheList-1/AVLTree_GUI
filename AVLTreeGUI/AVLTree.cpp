@@ -23,7 +23,41 @@ void AVLTree::Remove(const int& x)
 
 void AVLTree::Clear()
 {
-	clear(root);
+	root = clear(root);
+}
+
+std::string AVLTree::getInorder()
+{
+	std::string s;
+	printInorder(root, s);
+	return s;
+}
+
+std::string AVLTree::getPreorder()
+{
+	std::string s;
+	printPreorder(root, s);
+	return s;
+}
+
+std::string AVLTree::getPostorder()
+{
+	std::string s;
+	printPostorder(root, s);
+	return s;
+}
+
+std::vector<std::string> AVLTree::PrintLevel()
+{
+	std::vector<std::string> ans;
+
+	for (int i = 0; i <= getDepth(); ++i)
+	{
+		printGivenLevel(root, ans, i);
+		ans.push_back("/");
+	}
+
+	return ans;
 }
 
 int AVLTree::getDepth()
@@ -40,23 +74,27 @@ int AVLTree::getDepth()
 		return (rDepth + 1);
 }
 
-std::vector<int> AVLTree::getInorder()
+int AVLTree::Size()
 {
-	std::vector<int> ans;
-	printInorder(root, ans);
-	return ans;
+	int size = 0;
+	return getSize(root, size);
 }
 
-std::vector<int> AVLTree::getPreorder()
+TreeNode* AVLTree::getRoot()
 {
-	std::vector<int> ans;
-	printPreorder(root, ans);
-	return ans;
+	return root;
 }
 
-std::vector<int> AVLTree::getPostorder()
+bool AVLTree::hasLeft()
 {
-	std::vector<int> ans;
-	printPostorder(root, ans);
-	return ans;
+	if (root->left)
+		return true;
+	return false;
+}
+
+bool AVLTree::hasRight()
+{
+	if (root->right)
+		return true;
+	return false;
 }

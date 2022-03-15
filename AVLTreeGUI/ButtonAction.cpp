@@ -95,12 +95,47 @@ void clearButtonAction(HWND g_clearButton, AVLTree& t)
 	t.Clear();
 }
 
-void updateHeight(HWND g_propertyHeight, AVLTree& t)
+void updateProperty(const std::vector<HWND>& v, AVLTree& t)
 {
 	WCHAR buffer[11];
+
 	ZeroMemory(buffer, 11 * sizeof(WCHAR));
-	//GetWindowText(g_propertyHeight, buffer, GetWindowTextLength(g_propertyHeight) + 1);
-	swprintf_s(buffer, L"%d", t.getDepth());
-	SetWindowText(g_propertyHeight, L"");
-	SetWindowText(g_propertyHeight, buffer);
+	swprintf_s(buffer, L"%d", t.Size());
+	SetWindowText(v[0], buffer);
+
+	std::string s1 = t.getPreorder();
+	std::wstring ws1 = std::wstring(s1.begin(), s1.end());
+	SetWindowText(v[1], ws1.c_str());
+
+	std::string s2 = t.getPostorder();
+	std::wstring ws2 = std::wstring(s2.begin(), s2.end());
+	SetWindowText(v[2], ws2.c_str());
+
+	std::string s3 = t.getInorder();
+	std::wstring ws3 = std::wstring(s3.begin(), s3.end());
+	SetWindowText(v[3], ws3.c_str());
+}
+
+void drawHelper(Gdiplus::Graphics& memGraphics, std::vector<Gdiplus::Status>& ans, Gdiplus::PointF treeDataPos, TreeNode* t, int height)
+{
+	Gdiplus::FontFamily fontFamily(L"Verdana");
+	Gdiplus::Font font(&fontFamily, 20, Gdiplus::FontStyleRegular, Gdiplus::Unit::UnitPixel);
+	Gdiplus::SolidBrush solidBrush(Gdiplus::Color(0, 0, 0));
+
+	if (!t)
+		return;
+
+	ans.push_back(memGraphics.DrawString(L"0", -1, &font, treeDataPos, &solidBrush));
+	if (t->left)
+	{
+		treeDataPos.X /= height;
+		treeDataPos.Y += 100;
+		drawHelper(memGraphics, ans, treeDataPos, t->left, height);
+	}
+	if (t->right)
+	{
+		treeDataPos.X += treeDataPos.X / height;
+		treeDataPos.Y += 100;
+		drawHelper(memGraphics, ans, treeDataPos, t->right, height);
+	}
 }

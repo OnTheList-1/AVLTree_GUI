@@ -80,6 +80,11 @@ int AVLTree::Size()
 	return getSize(root, size);
 }
 
+int AVLTree::getParentValue(int node)
+{
+	return findParent(root, node, -1);
+}
+
 TreeNode* AVLTree::getRoot()
 {
 	return root;

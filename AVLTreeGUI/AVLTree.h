@@ -22,6 +22,7 @@ public:
 	int getDepth();
 	int Size();
 	TreeNode* getRoot();
+	int getParentValue(int x);
 
 	bool hasLeft();
 	bool hasRight();

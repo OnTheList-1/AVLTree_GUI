@@ -59,6 +59,8 @@ void searchButtonAction(HWND g_searchTextbox, AVLTree& t, HWND g_errorStaticbox)
 	ShowWindow(g_errorStaticbox, false);
 	SetWindowText(g_searchTextbox, L"");
 
+
+
 }
 
 void removeButtonAction(HWND g_removeTextbox, AVLTree& t, HWND g_errorStaticbox)
@@ -100,7 +102,7 @@ void updateProperty(const std::vector<HWND>& v, AVLTree& t)
 	WCHAR buffer[11];
 
 	ZeroMemory(buffer, 11 * sizeof(WCHAR));
-	swprintf_s(buffer, L"%d", t.Size());
+	swprintf_s(buffer, L"%d", t.getDepth());
 	SetWindowText(v[0], buffer);
 
 	std::string s1 = t.getPreorder();
@@ -116,26 +118,3 @@ void updateProperty(const std::vector<HWND>& v, AVLTree& t)
 	SetWindowText(v[3], ws3.c_str());
 }
 
-void drawHelper(Gdiplus::Graphics& memGraphics, std::vector<Gdiplus::Status>& ans, Gdiplus::PointF treeDataPos, TreeNode* t, int height)
-{
-	Gdiplus::FontFamily fontFamily(L"Verdana");
-	Gdiplus::Font font(&fontFamily, 20, Gdiplus::FontStyleRegular, Gdiplus::Unit::UnitPixel);
-	Gdiplus::SolidBrush solidBrush(Gdiplus::Color(0, 0, 0));
-
-	if (!t)
-		return;
-
-	ans.push_back(memGraphics.DrawString(L"0", -1, &font, treeDataPos, &solidBrush));
-	if (t->left)
-	{
-		treeDataPos.X /= height;
-		treeDataPos.Y += 100;
-		drawHelper(memGraphics, ans, treeDataPos, t->left, height);
-	}
-	if (t->right)
-	{
-		treeDataPos.X += treeDataPos.X / height;
-		treeDataPos.Y += 100;
-		drawHelper(memGraphics, ans, treeDataPos, t->right, height);
-	}
-}

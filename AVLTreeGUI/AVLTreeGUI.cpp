@@ -31,10 +31,12 @@ HWND g_propertyTextHeader0;
 HWND g_propertyTextHeader1;
 HWND g_propertyTextHeader2;
 HWND g_propertyTextHeader3;
+HWND g_propertyTextHeader4;
 HWND g_propertyTextValue0;
 HWND g_propertyTextValue1;
 HWND g_propertyTextValue2;
 HWND g_propertyTextValue3;
+HWND g_propertuTextValue4;
 
 std::vector<HWND> propertyVec;
 
@@ -268,7 +270,7 @@ bool OnCreate(HWND hWnd, LPCREATESTRUCT lpCreateStruct)
 	SendMessage(g_propertyTextHeader0, WM_SETFONT, (WPARAM)hFont, NULL);
 
 	g_propertyTextValue0 = CreateWindow(L"static", L"0", WS_CHILD | WS_VISIBLE,
-		50, 100, 50, 50, hWnd, nullptr, hInst, NULL);
+		80, 100, 50, 50, hWnd, nullptr, hInst, NULL);
 	SendMessage(g_propertyTextValue0, WM_SETFONT, (WPARAM)hFont, NULL);
 
 	g_propertyTextHeader1 = CreateWindow(L"static", L"Print Preorder: ", WS_CHILD | WS_VISIBLE,
@@ -294,6 +296,14 @@ bool OnCreate(HWND hWnd, LPCREATESTRUCT lpCreateStruct)
 	g_propertyTextValue3 = CreateWindow(L"static", L"NULL", WS_CHILD | WS_VISIBLE,
 		80, 145, 1600, 50, hWnd, nullptr, hInst, NULL);
 	SendMessage(g_propertyTextValue3, WM_SETFONT, (WPARAM)hFont, NULL);
+
+	g_propertyTextHeader4 = CreateWindow(L"static", L"# elements: ", WS_CHILD | WS_VISIBLE,
+		10, 160, 100, 50, hWnd, nullptr, hInst, NULL);
+	SendMessage(g_propertyTextHeader4, WM_SETFONT, (WPARAM)hFont, NULL);
+
+	g_propertuTextValue4 = CreateWindow(L"static", L"0", WS_CHILD | WS_VISIBLE,
+		80, 160, 1600, 50, hWnd, nullptr, hInst, NULL);
+	SendMessage(g_propertuTextValue4, WM_SETFONT, (WPARAM)hFont, NULL);
 
 	// Canvas Rect
 	g_canvasRect.left = 0;
@@ -326,7 +336,7 @@ void OnPaint(HWND hWnd)
 
 	RECT rc;
 	GetClientRect(hWnd, &rc);
-	rc.top = 100;
+	rc.top = 60;
 	HDC memdc;
 	auto hbuff = BeginBufferedPaint(hdc, &rc, BPBF_COMPATIBLEBITMAP, NULL, &memdc);
 
@@ -403,6 +413,16 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 #pragma endregion
 
+Gdiplus::PointF getParentPosition(int currentVal, std::vector<std::pair<int, Gdiplus::PointF>> parentPos)
+{
+	for (int i = 0; i < parentPos.size(); ++i)
+	{
+		if (currentVal == parentPos[i].first)
+			return parentPos[i].second;
+	}
+	return Gdiplus::PointF(0, 0);
+}
+
 void MemoryBuffer(HWND hWnd, HDC hdc)
 {
 	// Initalize buffer and main canvas
@@ -416,48 +436,69 @@ void MemoryBuffer(HWND hWnd, HDC hdc)
 	Gdiplus::FontFamily fontFamily(L"Verdana");
 	Gdiplus::Font font(&fontFamily, 20, Gdiplus::FontStyleRegular, Gdiplus::Unit::UnitPixel);
 	Gdiplus::PointF treeDataPos(775, 200);
+	Gdiplus::PointF rootPos(775, 200);
+	Gdiplus::PointF prevPos(treeDataPos);
+	std::vector<std::pair<int, Gdiplus::PointF>> nodePosition;
 	Gdiplus::SolidBrush solidBrush(Gdiplus::Color(0, 0, 0));
 
 	graphics.Clear(Gdiplus::Color(255, 255, 255));
 
 	/*
 
-		Draw out n elements where there are n ellipse, n values and 2 * n lines
-		For every element in an ellipse,
+		Drrrrrrrraaaaaaaaawwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 
 	*/
 
 	int size = t.Size();
-	int height = 2;
-	int factorX = 1;
-	int factorY = 1;
 	int offsetX_ellipse = 15;
 	int offsetY_ellipse = 10;
-	int prevXPos = (int)treeDataPos.X;
 	std::vector<std::string> dataPerLevel = t.PrintLevel();
+	std::vector<int> dataHeight;
+	int level = 0;
 
-	for (int i = 1; i < dataPerLevel.size(); ++i)
+	for (int i = 0; i < dataPerLevel.size(); ++i)
+	{ // get current level as we draw
+		if (dataPerLevel[i] == "/")
+			dataHeight.push_back(++level);
+	}
+	level = 0;
+	for (int i = 1; i < dataPerLevel.size() - 1; ++i)
 	{
 		if (dataPerLevel[i] == "/")
-		{
-			treeDataPos.X -= 200;
-			prevXPos = (int)treeDataPos.X;
-			treeDataPos.Y += 80;
-			++factorX;
-			++height;
+		{ // if it's a new line, update x, y, and level
+			prevPos = rootPos;
+			rootPos.X -= 150;
+			rootPos.Y += 120;
+			treeDataPos.X = (Gdiplus::REAL)rootPos.X;
+			treeDataPos.Y += 120;
+			++level;
 			continue;
 		}
 
 		if (dataPerLevel[i] == ".")
-		{
-			treeDataPos.X += 125;
+		{ // if it's a null node, move along
+			treeDataPos.X += (Gdiplus::REAL)550 / dataHeight[level];
+			prevPos = treeDataPos;
 			continue;
 		}
 
 		std::wstring wstr = std::wstring(dataPerLevel[i].begin(), dataPerLevel[i].end());
+		int parentValue = t.getParentValue(std::stoi(dataPerLevel[i]));
+		nodePosition.push_back(std::make_pair(std::stoi(dataPerLevel[i]), treeDataPos));
+
 		memGraphics.DrawString(wstr.c_str(), -1, &font, treeDataPos, &solidBrush);
 		memGraphics.DrawEllipse(blackPen, (int)treeDataPos.X - offsetX_ellipse, (int)treeDataPos.Y - offsetY_ellipse, 50, 50);
-		treeDataPos.X = prevXPos + 125;
+		//memGraphics.DrawLine(blackPen, prevPos, treeDataPos);
+		memGraphics.DrawLine(blackPen, treeDataPos, getParentPosition(parentValue, nodePosition));
+
+
+		/*if (treeDataPos.X > rootPos.X)
+		{
+			Gdiplus::PointF temp(rootPos.X + 150, rootPos.Y - 120);
+			memGraphics.DrawLine(blackPen, temp, treeDataPos);
+		}*/
+		treeDataPos.X += (Gdiplus::REAL)550 / dataHeight[level];
+		prevPos = treeDataPos;
 	}
 
 	graphics.DrawImage(buffer, 0, 0);

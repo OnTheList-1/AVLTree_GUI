@@ -244,6 +244,20 @@ int getSize(TreeNode* t, int& x)
 	return 1 + getSize(t->left, x) + getSize(t->right, x);
 }
 
+int findParent(TreeNode* t, int val, int parent)
+{
+	if (!t)
+		return -1;
+
+	if (t->data == val)
+		return parent;
+
+
+	findParent(t->left, val, t->data);
+	findParent(t->right, val, t->data);
+
+}
+
 #pragma endregion
 
 #pragma region Tree Traversal
@@ -288,8 +302,8 @@ void printGivenLevel(TreeNode* t, std::vector<std::string>& ans, int level)
 
 	else if (level > 1)
 	{
-		if (!t->left && !t->right)
-			return;
+		/*if (!t->left && !t->right)
+			return;*/
 		printGivenLevel(t->left, ans, level - 1);
 		printGivenLevel(t->right, ans, level - 1);
 	}

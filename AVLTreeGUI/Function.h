@@ -1,8 +1,8 @@
 #pragma once
 
 #include <iostream>
-#include "TreeNode.h"
 #include <list>
+#include "TreeNode.h"
 #include <string>
 
 #define _CRT_SECURE_NO_WARNINGS
@@ -149,12 +149,12 @@ TreeNode* insert(TreeNode* t, const int& x)
 
 	if (balance > 1 && x > t->left->data)
 	{ // left right case
-		return rightRotate(t);
+		return doubleRightRotate(t);
 	}
 
 	if (balance < -1 && x < t->right->data)
 	{ // right left case
-		return leftRotate(t);
+		return doubleLeftRotate(t);
 	}
 
 	return t;
@@ -244,17 +244,19 @@ int getSize(TreeNode* t, int& x)
 	return 1 + getSize(t->left, x) + getSize(t->right, x);
 }
 
-int findParent(TreeNode* t, int val, int parent)
+int findParent(TreeNode* t, int val)
 {
 	if (!t)
-		return -1;
+		return NULL;
 
-	if (t->data == val)
-		return parent;
+	if ((t->left && t->left->data == val) || (t->right && t->right->data == val))
+		return t->data;
 
+	if (t->data > val)
+		return findParent(t->left, val);
 
-	findParent(t->left, val, t->data);
-	findParent(t->right, val, t->data);
+	if (t->data < val)
+		return findParent(t->right, val);
 
 }
 

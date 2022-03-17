@@ -24,6 +24,10 @@ HWND g_removeTextbox;
 HWND g_searchButton;
 HWND g_searchTextbox;
 HWND g_clearButton;
+HWND g_outputRuntimeButton;
+HWND g_messageForOutputButton;
+
+// Property info
 HWND g_messageStaticbox0;
 HWND g_messageStaticbox1;
 HWND g_messageStaticbox2;
@@ -38,6 +42,7 @@ HWND g_propertyTextValue2;
 HWND g_propertyTextValue3;
 HWND g_propertuTextValue4;
 
+
 std::vector<HWND> propertyVec;
 
 // Region to draw
@@ -51,6 +56,12 @@ AVLTree t;
 Gdiplus::GdiplusStartupInput gdiplusStartupInput;
 ULONG_PTR gdiplusToken;
 
+// node and its position on screen
+std::vector<std::pair<int, Gdiplus::PointF>> nodePosition;
+
+// PointF
+Gdiplus::PointF* searchNodePosition = new Gdiplus::PointF;
+
 #pragma endregion
 
 #pragma region Foward Declarations
@@ -60,6 +71,7 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+
 
 #pragma endregion
 
@@ -102,6 +114,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	// Shut down Gdiplus
 	Gdiplus::GdiplusShutdown(gdiplusToken);
+
+	// Clean up
+	delete searchNodePosition;
+	searchNodePosition = nullptr;
 
 	return (int)msg.wParam;
 }
@@ -254,6 +270,13 @@ bool OnCreate(HWND hWnd, LPCREATESTRUCT lpCreateStruct)
 		660, 10, 60, 20, hWnd, (HMENU)IDC_CLEARALL_BUTTON, hInst, NULL);
 	SendMessage(g_clearButton, WM_SETFONT, (WPARAM)hFont, NULL);
 
+	g_outputRuntimeButton = CreateWindow(L"button", L"Get Runtime Info", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+		1460, 10, 100, 20, hWnd, (HMENU)IDC_RUNTIME_BUTTON, hInst, NULL);
+	SendMessage(g_outputRuntimeButton, WM_SETFONT, (WPARAM)hFont, NULL);
+
+	g_messageForOutputButton = CreateWindow(L"static", L"", WS_CHILD,
+		1460, 30, 100, 20, hWnd, nullptr, hInst, NULL);
+
 	g_messageStaticbox0 = CreateWindow(L"static", L"INVALID", WS_CHILD,
 		10, 40, 50, 50, hWnd, nullptr, hInst, NULL);
 	SendMessage(g_messageStaticbox0, WM_SETFONT, (WPARAM)hFontError, NULL);
@@ -322,6 +345,7 @@ bool OnCreate(HWND hWnd, LPCREATESTRUCT lpCreateStruct)
 	propertyVec.push_back(g_propertyTextValue1);
 	propertyVec.push_back(g_propertyTextValue2);
 	propertyVec.push_back(g_propertyTextValue3);
+	propertyVec.push_back(g_propertuTextValue4);
 
 	InvalidateRect(hWnd, NULL, true);
 
@@ -356,6 +380,8 @@ void OnCommand(HWND hWnd, int id, HWND hwndCtl1, UINT codeNotify)
 	switch (id)
 	{
 	case IDC_INSERT_BUTTON:
+		nodePosition.clear();
+		searchNodePosition = nullptr;
 		insertButtonAction(g_insertTextbox, t, g_messageStaticbox0);
 		updateProperty(propertyVec, t);
 		InvalidateRect(hWnd, &g_propertyRect, false);
@@ -365,11 +391,15 @@ void OnCommand(HWND hWnd, int id, HWND hwndCtl1, UINT codeNotify)
 		break;
 
 	case IDC_SEARCH_BUTTON:
-		searchButtonAction(g_searchTextbox, t, g_messageStaticbox2);
+		searchButtonAction(g_searchTextbox, t, g_messageStaticbox2, nodePosition, searchNodePosition);
+		InvalidateRect(hWnd, &g_propertyRect, false);
+		InvalidateRect(hWnd, &g_canvasRect, false);
 		SendMessage(hWnd, WM_PAINT, NULL, NULL);
 		break;
 
 	case IDC_REMOVE_BUTTON:
+		nodePosition.clear();
+		searchNodePosition = nullptr;
 		removeButtonAction(g_removeTextbox, t, g_messageStaticbox1);
 		InvalidateRect(hWnd, &g_propertyRect, false);
 		InvalidateRect(hWnd, &g_canvasRect, false);
@@ -378,11 +408,17 @@ void OnCommand(HWND hWnd, int id, HWND hwndCtl1, UINT codeNotify)
 		break;
 
 	case IDC_CLEARALL_BUTTON:
+		searchNodePosition = nullptr;
 		clearButtonAction(g_removeButton, t);
 		InvalidateRect(hWnd, &g_propertyRect, false);
 		InvalidateRect(hWnd, &g_canvasRect, false);
 		updateProperty(propertyVec, t);
 		SendMessage(hWnd, WM_PAINT, NULL, NULL);
+		break;
+
+	case IDC_RUNTIME_BUTTON:
+		outputRuntimeButtonAction(g_outputRuntimeButton, g_messageForOutputButton);
+
 		break;
 	}
 }
@@ -434,14 +470,13 @@ void MemoryBuffer(HWND hWnd, HDC hdc)
 	// Initialize materials to draw
 	Gdiplus::Pen* blackPen = new Gdiplus::Pen(Gdiplus::Color(0, 0, 0));
 	Gdiplus::FontFamily fontFamily(L"Verdana");
-	Gdiplus::Font font(&fontFamily, 20, Gdiplus::FontStyleRegular, Gdiplus::Unit::UnitPixel);
+	Gdiplus::SolidBrush solidBrush(Gdiplus::Color(0, 0, 0));
 	Gdiplus::PointF treeDataPos(775, 200);
 	Gdiplus::PointF rootPos(775, 200);
-	Gdiplus::PointF prevPos(treeDataPos);
-	std::vector<std::pair<int, Gdiplus::PointF>> nodePosition;
-	Gdiplus::SolidBrush solidBrush(Gdiplus::Color(0, 0, 0));
-
-	graphics.Clear(Gdiplus::Color(255, 255, 255));
+	int offsetX_ellipse = 15;
+	int offsetY_ellipse = 10;
+	int count = 0; // spaces between child with different parents
+	std::vector<std::string> dataPerLevel = t.PrintLevel();
 
 	/*
 
@@ -449,10 +484,6 @@ void MemoryBuffer(HWND hWnd, HDC hdc)
 
 	*/
 
-	int size = t.Size();
-	int offsetX_ellipse = 15;
-	int offsetY_ellipse = 10;
-	std::vector<std::string> dataPerLevel = t.PrintLevel();
 	std::vector<int> dataHeight;
 	int level = 0;
 
@@ -462,45 +493,75 @@ void MemoryBuffer(HWND hWnd, HDC hdc)
 			dataHeight.push_back(++level);
 	}
 	level = 0;
+
+	// This is where we draw
 	for (int i = 1; i < dataPerLevel.size() - 1; ++i)
 	{
 		if (dataPerLevel[i] == "/")
 		{ // if it's a new line, update x, y, and level
-			prevPos = rootPos;
 			rootPos.X -= 150;
 			rootPos.Y += 120;
-			treeDataPos.X = (Gdiplus::REAL)rootPos.X;
+			treeDataPos.X = rootPos.X;
 			treeDataPos.Y += 120;
 			++level;
+			count = 0;
 			continue;
 		}
 
 		if (dataPerLevel[i] == ".")
 		{ // if it's a null node, move along
-			treeDataPos.X += (Gdiplus::REAL)550 / dataHeight[level];
-			prevPos = treeDataPos;
+			if (++count == 2)
+			{
+				treeDataPos.X += rootPos.X / 3;
+				count = 0;
+			}
+			else
+				treeDataPos.X += rootPos.X / 2;
 			continue;
 		}
 
+		// convert string to wchar* && get parent of the current node
 		std::wstring wstr = std::wstring(dataPerLevel[i].begin(), dataPerLevel[i].end());
 		int parentValue = t.getParentValue(std::stoi(dataPerLevel[i]));
-		nodePosition.push_back(std::make_pair(std::stoi(dataPerLevel[i]), treeDataPos));
+		Gdiplus::PointF offsetDest(treeDataPos.X + 11, treeDataPos.Y + 40);
+		nodePosition.push_back(std::make_pair(std::stoi(dataPerLevel[i]), offsetDest));
+
+		Gdiplus::Font font(&fontFamily, dataPerLevel[i].size() > 1 ? 1.51f * (20 / dataPerLevel[i].size()) : 20, Gdiplus::FontStyleRegular, Gdiplus::Unit::UnitPixel);
 
 		memGraphics.DrawString(wstr.c_str(), -1, &font, treeDataPos, &solidBrush);
-		memGraphics.DrawEllipse(blackPen, (int)treeDataPos.X - offsetX_ellipse, (int)treeDataPos.Y - offsetY_ellipse, 50, 50);
-		//memGraphics.DrawLine(blackPen, prevPos, treeDataPos);
-		memGraphics.DrawLine(blackPen, treeDataPos, getParentPosition(parentValue, nodePosition));
+		memGraphics.DrawEllipse(blackPen, (int)treeDataPos.X - (int)(dataPerLevel[i].size() > 1 ? offsetX_ellipse - (dataPerLevel[i].size() * 1.8) : offsetX_ellipse), (int)treeDataPos.Y - offsetY_ellipse, 50, 50);
 
+		if (dataPerLevel[i] == dataPerLevel[1]) // if its the root node then we skip so we don't have to draw line
+			continue;
 
-		/*if (treeDataPos.X > rootPos.X)
+		// Draw line connecting the node to its parent
+		Gdiplus::PointF offsetSrc(treeDataPos.X + 7, treeDataPos.Y - 10);
+		memGraphics.DrawLine(blackPen, offsetSrc, getParentPosition(parentValue, nodePosition));
+
+		// update x pos so we can print horizontally
+		if (++count == 2)
 		{
-			Gdiplus::PointF temp(rootPos.X + 150, rootPos.Y - 120);
-			memGraphics.DrawLine(blackPen, temp, treeDataPos);
-		}*/
-		treeDataPos.X += (Gdiplus::REAL)550 / dataHeight[level];
-		prevPos = treeDataPos;
+			treeDataPos.X += rootPos.X / 3;
+			count = 0;
+		}
+		else
+			treeDataPos.X += rootPos.X / 2;
+
+		//treeDataPos.X += (Gdiplus::REAL)550 / dataHeight[level];
 	}
 
+	if (searchNodePosition)
+	{
+		Gdiplus::Pen* redPen = new Gdiplus::Pen(Gdiplus::Color(225, 6, 0), 5.0f);
+		memGraphics.DrawEllipse(redPen, (int)searchNodePosition->X - 25, (int)searchNodePosition->Y - 50, 50, 50);
+		delete redPen;
+		redPen = nullptr;
+	}
+
+	// Clear background with white
+	graphics.Clear(Gdiplus::Color(255, 255, 255));
+
+	// take drawn buffer image and draw it onto the main window
 	graphics.DrawImage(buffer, 0, 0);
 	delete buffer;
 	buffer = nullptr;

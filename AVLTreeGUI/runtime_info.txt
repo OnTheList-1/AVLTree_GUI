@@ -1,0 +1,5 @@
+Insert: 1751 microseconds
+Traverse: 11445 microseconds
+Search: 4 microseconds
+Height: 10
+Remove: 313 microseconds
